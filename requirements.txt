@@ -1,0 +1,6 @@
+azure-identity
+cryptography
+msal
+requests
+elgato
+streamdeck
