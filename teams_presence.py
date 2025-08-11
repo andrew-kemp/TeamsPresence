@@ -1,12 +1,10 @@
 import time
-import json
 import requests
 import os
 from azure.identity import CertificateCredential
 from cryptography.hazmat.primitives import hashes
 from cryptography import x509
 
-# --- Load configuration from environment (systemd EnvironmentFile) ---
 def getenv_required(var):
     value = os.getenv(var)
     if not value:
@@ -20,7 +18,6 @@ USER_ID = getenv_required("USER_ID")
 KEYLIGHT_IP = getenv_required("KEYLIGHT_IP")
 
 def print_cert_thumbprint(pem_path):
-    # Extract only the certificate part from PEM (to avoid errors if key is present)
     with open(pem_path, "rb") as f:
         lines = f.readlines()
     cert_lines = []
@@ -63,7 +60,6 @@ def get_presence(access_token):
         return None
 
 def keylight_set_on(on: bool):
-    # Elgato Key Light API expects {"lights":[{"on":1}]} to turn on, {"lights":[{"on":0}]} to turn off
     url = f"http://{KEYLIGHT_IP}:9123/elgato/lights"
     payload = {"lights": [{"on": 1 if on else 0}]}
     try:
@@ -77,10 +73,9 @@ def main():
     print_cert_thumbprint(PEM_PATH)
     access_token = get_token()
     last_status = None
-    token_expiry = time.time() + 3300  # Token valid for 1 hour, refresh a bit early
+    token_expiry = time.time() + 3300
 
     while True:
-        # Refresh token if needed
         if time.time() > token_expiry:
             access_token = get_token()
             token_expiry = time.time() + 3300
@@ -91,9 +86,8 @@ def main():
             activity = presence.get("activity", "PresenceUnknown")
             print(f"Current presence: {availability} / {activity}")
 
-            # If in a call or meeting, turn ON the light. If available, turn it OFF.
             in_call = activity.lower() in ["inacall", "inaudiocall", "inmeeting", "presenting"]
-            light_on = in_call  # Light ON in a call, OFF when available
+            light_on = in_call
             if light_on != last_status:
                 keylight_set_on(light_on)
                 last_status = light_on
