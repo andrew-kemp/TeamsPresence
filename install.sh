@@ -5,14 +5,16 @@ set -e
 INSTALL_DIR="/opt/teams-keylight"
 SERVICE_NAME="teams-keylight"
 SCRIPT_NAME="teams_presence.py"
-RAW_URL="https://raw.githubusercontent.com/andrew-kemp/TeamsPresence/refs/heads/main/teams_presence.py"
+RAW_SCRIPT_URL="https://raw.githubusercontent.com/andrew-kemp/TeamsPresence/refs/heads/main/teams_presence.py"
+RAW_REQS_URL="https://raw.githubusercontent.com/andrew-kemp/TeamsPresence/refs/heads/main/requirements.txt"
 VENV_DIR="$INSTALL_DIR/venv"
 CERT_FILE="$INSTALL_DIR/keylightair.pem"
 CONF_FILE="$INSTALL_DIR/teams-keylight.conf"
 SYSTEMD_PATH="/etc/systemd/system/${SERVICE_NAME}.service"
 
 echo_title() {
-    echo; echo "=============================="
+    echo
+    echo "=============================="
     echo "$@"
     echo "=============================="
 }
@@ -38,18 +40,19 @@ echo_title "Setting up directories"
 sudo mkdir -p "$INSTALL_DIR"
 sudo chown $USER:$USER "$INSTALL_DIR"
 
-# 3. Download script
-echo_title "Downloading script"
-curl -fsSL "$RAW_URL" -o "$INSTALL_DIR/$SCRIPT_NAME"
+# 3. Download script and requirements.txt
+echo_title "Downloading Python script and requirements.txt"
+curl -fsSL "$RAW_SCRIPT_URL" -o "$INSTALL_DIR/$SCRIPT_NAME"
+curl -fsSL "$RAW_REQS_URL" -o "$INSTALL_DIR/requirements.txt"
 chmod 700 "$INSTALL_DIR/$SCRIPT_NAME"
 
-# 4. Set up venv
+# 4. Set up venv and install dependencies
 echo_title "Setting up Python virtual environment"
 if [ ! -d "$VENV_DIR" ]; then
     python3 -m venv "$VENV_DIR"
 fi
 "$VENV_DIR/bin/pip" install --upgrade pip
-"$VENV_DIR/bin/pip" install azure-identity cryptography requests
+"$VENV_DIR/bin/pip" install -r "$INSTALL_DIR/requirements.txt"
 
 # 5. Generate self-signed certificate (always overwrite for idempotency)
 echo_title "Generating self-signed certificate"
