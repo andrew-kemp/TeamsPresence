@@ -9,6 +9,9 @@ RAW_SCRIPT_URL="https://raw.githubusercontent.com/andrew-kemp/TeamsPresence/refs
 RAW_REQS_URL="https://raw.githubusercontent.com/andrew-kemp/TeamsPresence/refs/heads/main/requirements.txt"
 VENV_DIR="$INSTALL_DIR/venv"
 CERT_FILE="$INSTALL_DIR/keylightair.pem"
+CERT_KEY="$INSTALL_DIR/keylightair.key"
+CERT_CRT="$INSTALL_DIR/keylightair.crt"
+UPLOAD_CRT="$INSTALL_DIR/keylightair-upload.crt"
 CONF_FILE="$INSTALL_DIR/teams-keylight.conf"
 SYSTEMD_PATH="/etc/systemd/system/${SERVICE_NAME}.service"
 
@@ -57,16 +60,31 @@ fi
 # 5. Generate self-signed certificate (always overwrite for idempotency)
 echo_title "Generating self-signed certificate"
 openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-    -keyout "$INSTALL_DIR/keylightair.key" \
-    -out "$INSTALL_DIR/keylightair.crt" \
+    -keyout "$CERT_KEY" \
+    -out "$CERT_CRT" \
     -subj "/CN=teams-keylight"
-cat "$INSTALL_DIR/keylightair.key" "$INSTALL_DIR/keylightair.crt" > "$CERT_FILE"
-chmod 600 "$INSTALL_DIR/keylightair.key" "$INSTALL_DIR/keylightair.crt" "$CERT_FILE"
+cat "$CERT_KEY" "$CERT_CRT" > "$CERT_FILE"
+chmod 600 "$CERT_KEY" "$CERT_CRT" "$CERT_FILE"
+# Save public cert for Azure upload
+cp "$CERT_CRT" "$UPLOAD_CRT"
+chmod 644 "$UPLOAD_CRT"
+
 echo "Certificate and PEM created at $CERT_FILE"
 
-# 6. Display public cert for Azure
+# 6. Display public cert for Azure, and tell user where to find the .crt for upload
 echo_title "Azure App Registration Certificate Block"
-awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/ {print}' "$INSTALL_DIR/keylightair.crt"
+awk '/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/ {print}' "$CERT_CRT"
+
+echo
+echo "=============================================================="
+echo "IMPORTANT: Upload the public certificate to your Azure App Registration."
+echo
+echo "Either:"
+echo "- Copy the above certificate block"
+echo "- OR upload the file: $UPLOAD_CRT"
+echo "In Azure Portal: App Registration > Certificates & Secrets > 'Upload certificate'"
+echo "=============================================================="
+echo
 
 # 7. Prompt for config and write conf file
 echo_title "Configuring Teams Keylight"
@@ -113,3 +131,5 @@ echo "==== Install complete! ===="
 echo "Teams-Keylight will now start automatically on boot."
 echo "Check status: sudo systemctl status $SERVICE_NAME"
 echo "Logs:       sudo journalctl -u $SERVICE_NAME -f"
+echo
+echo "===> Don't forget to upload $UPLOAD_CRT to Azure before starting the service!"
